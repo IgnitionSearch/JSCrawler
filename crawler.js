@@ -1,12 +1,13 @@
 const { PlaywrightCrawler } = require('crawlee');
 const mysql = require('mysql2/promise');
+require('dotenv').config();
 
 const dbConfig = {
-  host: '159.89.234.226',
-  user: 'root',
-  password: '123',
-  database: 'seo_crawls',
-  port: 32002,
+  host: process.env.host,
+  user: process.env.user,
+  password: process.env.password,
+  database: process.env.database,
+  port: process.env.port, 
 };
 
 const pool = mysql.createPool(dbConfig);
