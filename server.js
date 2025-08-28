@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const { exec } = require('child_process');
+const { runCrawler } = require('./crawler');
 require('dotenv').config();
 
 const app = express();
@@ -19,11 +20,18 @@ const dbConfig = {
 const pool = mysql.createPool(dbConfig);
 
 // Start crawl endpoint
-app.get('/start-crawl', (req, res) => {
-  exec('node crawler.js', (err, stdout) => {
-    if (err) return res.status(500).send('Error: ' + err.message);
-    res.send('Crawl started: ' + stdout);
-  });
+app.get('/start-crawl', async (req, res) => {
+  const { crawl_url } = req.query;
+  if (!crawl_url) {
+    return res.status(400).send('Missing crawl_url parameter');
+  }
+  try {
+    // Assuming runCrawler is imported or defined elsewhere
+    const result = await runCrawler(crawl_url);
+    res.send('Crawl started: ' + JSON.stringify(result));
+  } catch (err) {
+    res.status(500).send('Error: ' + err.message);
+  }
 });
 
 // Get pages
