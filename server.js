@@ -2,17 +2,18 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const { exec } = require('child_process');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const dbConfig = {
-  host: '159.89.234.226',
-  user: 'root',
-  password: '123',
-  database: 'seo_crawls',
-  port: 32002, 
+  host: process.env.host,
+  user: process.env.user,
+  password: process.env.password,
+  database: process.env.database,
+  port: process.env.port, 
 };
 
 const pool = mysql.createPool(dbConfig);
