@@ -34,7 +34,7 @@ async function runCrawler(crawl_url) {
     port: process.env.port,
   });
 
-  // Start crawl
+  //start crawl
   const [ins] = await pool.execute(
     'INSERT INTO crawls (start_time, start_url) VALUES (NOW(), ?)',
     [crawl_url]
@@ -47,9 +47,9 @@ async function runCrawler(crawl_url) {
     maxRequestRetries: 3,
 
     async requestHandler({ page, request, enqueueLinks, log }) {
-      log.info(`Crawl ID: ${crawlId} | Processing: ${request.url}`);
+      log.info(`Crawl ID: ${crawlId} | Processing URL: ${request.url}`);
 
-      // HEAD first to avoid loading heavy pages unnecessarily
+      
       const headResp = await page.request.fetch(request.url, { method: 'HEAD' }).catch(() => null);
       const statusCode = headResp ? headResp.status() : null;
       const contentType = headResp ? (headResp.headers()['content-type'] || null) : null;
@@ -57,7 +57,7 @@ async function runCrawler(crawl_url) {
 
       let title = null, metaDescription = null, canonical = null, metaRobots = null, hreflang = null;
 
-      // Only parse DOM for HTML pages
+      
       const isHtml = contentType && contentType.includes('text/html');
       if (isHtml) {
         await page.goto(request.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
@@ -73,9 +73,9 @@ async function runCrawler(crawl_url) {
         } catch {}
       }
 
-      const pageExtra = {}; // room for per-page extras if you need
+      const pageExtra = {}; 
 
-      // Upsert page; capture insertId from THIS execute call
+      
       const pageInsertSql = `
         INSERT INTO url
           (crawl_id, url, status_code, content_type, content_length, title, meta_description, canonical, meta_robots, hreflang, extra_data, size)
@@ -104,7 +104,7 @@ async function runCrawler(crawl_url) {
       const pageId = pageRes.insertId;
 
       if (isHtml) {
-        /* -------- Anchor links -------- */
+        //anchor links
         const rawHrefs = await page.$$eval('a', as =>
           as.map(a => a.getAttribute('href')).filter(Boolean)
         ).catch(() => []);
@@ -126,7 +126,7 @@ async function runCrawler(crawl_url) {
           ).catch(err => log.error(`Link save error ${href}: ${err.message}`));
         }
 
-        /* -------- Images (alt + loading) -------- */
+        //image alt and lazy loading
         const imgNodes = await page.$$eval('img', imgs =>
           imgs.map(img => ({
             src: img.getAttribute('src') || img.currentSrc || img.src || '',
@@ -154,7 +154,7 @@ async function runCrawler(crawl_url) {
           ).catch(err => log.error(`Image save error ${src}: ${err.message}`));
         }
 
-        // Keep crawling within the same origin
+        //crawls same origin
         await enqueueLinks({ globs: [`${new URL(request.url).origin}/**`] }).catch(() => {});
       }
     },
