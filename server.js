@@ -27,7 +27,6 @@ app.get('/start-crawl', async (req, res) => {
     return res.status(400).send('Missing crawl_url parameter');
   }
   try {
-    // Assuming runCrawler is imported or defined elsewhere
     const result = await runCrawler(crawl_url);
     res.send('Crawl started: ' + JSON.stringify(result));
   } catch (err) {
