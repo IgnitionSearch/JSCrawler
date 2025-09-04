@@ -21,7 +21,8 @@ const pool = mysql.createPool(dbConfig);
 
 // Start crawl endpoint
 app.get('/start-crawl', async (req, res) => {
-  const { crawl_url } = req.query;
+  const { crawl_url: encodedUrl } = req.query;
+  const crawl_url = encodedUrl ? decodeURIComponent(encodedUrl) : undefined;
   if (!crawl_url) {
     return res.status(400).send('Missing crawl_url parameter');
   }
