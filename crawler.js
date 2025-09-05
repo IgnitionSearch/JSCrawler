@@ -24,6 +24,17 @@ const classifyScope = (targetUrl, pageUrl) => {
   }
 };
 
+const classifyPageScope = (pageUrl, startUrl) => {
+  try {
+    const page = new URL(pageUrl);
+    const start = new URL(startUrl);
+    return (page.protocol.startsWith('http') && page.origin === start.origin) ? 'internal' : 'external';
+  } catch {
+    return 'external';
+  }
+};
+
+
 /** ---------- main ---------- **/
 async function runCrawler(crawl_url) {
   const pool = mysql.createPool({
@@ -50,10 +61,11 @@ async function runCrawler(crawl_url) {
       log.info(`Crawl ID: ${crawlId} | Processing URL: ${request.url}`);
 
       
-      const headResp = await page.request.fetch(request.url, { method: 'HEAD' }).catch(() => null);
-      const statusCode = headResp ? headResp.status() : null;
-      const contentType = headResp ? (headResp.headers()['content-type'] || null) : null;
-      const contentLength = headResp ? parseInt(headResp.headers()['content-length'] || '0', 10) : 0;
+      const response = await page.goto(request.url, { waitUntil: 'domcontentloaded' }).catch(() => null);
+      const statusCode = response ? response.status() : null;
+      const contentType = response ? response.headers()['content-type'] || null : null;
+      const contentLength = response ? parseInt(response.headers()['content-length'] || '0', 10) : 0;
+
 
       let title = null, metaDescription = null, canonical = null, metaRobots = null, hreflang = null;
 
@@ -75,12 +87,13 @@ async function runCrawler(crawl_url) {
 
       const pageExtra = {}; 
 
-      
+      const pageScope = classifyPageScope(request.url, crawl_url);
+
       const pageInsertSql = `
         INSERT INTO url
-          (crawl_id, url, status_code, content_type, content_length, title, meta_description, canonical, meta_robots, hreflang, extra_data, size)
+          (crawl_id, url, status_code, content_type, content_length, title, meta_description, canonical, meta_robots, hreflang, extra_data, size, page_scope)
         VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           status_code      = VALUES(status_code),
           content_type     = VALUES(content_type),
@@ -98,7 +111,7 @@ async function runCrawler(crawl_url) {
       const [pageRes] = await pool.execute(pageInsertSql, [
         crawlId, request.url, statusCode, contentType, contentLength,
         title, metaDescription, canonical, metaRobots, hreflang,
-        JSON.stringify(pageExtra), contentLength
+        JSON.stringify(pageExtra), contentLength, pageScope
       ]);
 
       const pageId = pageRes.insertId;
